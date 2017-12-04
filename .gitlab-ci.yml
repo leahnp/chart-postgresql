@@ -5,6 +5,12 @@ variables:
   CHART_NAME: postgresql
   REGISTRY_CHART_URI:  ${REGISTRY_HOST}/${REGISTRY_CHART_ORG}/${CHART_NAME}
 
+
+stages:
+  - build
+  - test
+  - publish
+
 build-branch:
   stage: build
   only:
@@ -29,8 +35,8 @@ test-branch:
   - cat ${CHART_NAME}/Chart.yaml
   - helm lint ${CHART_NAME}
 
-deploy-branch:
-  stage: deploy
+publish-branch:
+  stage: publish
   only:
     - branches
     - master
@@ -62,8 +68,8 @@ test-tags:
   - cat ${CHART_NAME}/Chart.yaml
   - helm lint ${CHART_NAME}
 
-deploy-tags:
-  stage: deploy
+publish-tags:
+  stage: publish
   only:
     - tags
   dependencies:
