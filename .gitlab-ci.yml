@@ -1,10 +1,14 @@
-image: quay.io/samsung_cnct/helm-registry-agent:v0.7.4-helm_2.6
+image: $HELM_REGISTRY_IMAGE:$HELM_REGISTRY_VERSION
 
 variables:
+  REGISTRY: quay.io
+  REGISTRY_USER: samsung_cnct
+  # ROBOT_ACCOUNT: postgresql_rw
   CHART_REL: ${CI_COMMIT_SHA}
   CHART_NAME: postgresql
   REGISTRY_CHART_URI:  ${REGISTRY_HOST}/${REGISTRY_CHART_ORG}/${CHART_NAME}
-
+  HELM_REGISTRY_IMAGE: quay.io/samsung_cnct/helm-registry-agent
+  HELM_REGISTRY_VERSION: v0.7.4-helm_2.6
 
 stages:
   - build
@@ -15,7 +19,7 @@ build-branch:
   stage: build
   only:
     - branches
-    - master
+    # - master
   artifacts:
     paths:
     - ./*/Chart.yaml
@@ -28,7 +32,7 @@ test-branch:
   stage: test
   only:
     - branches
-    - master
+    # - master
   dependencies:
   - build-branch
   script:
@@ -39,7 +43,7 @@ publish-branch:
   stage: publish
   only:
     - branches
-    - master
+    # - master
   dependencies:
   - build-branch
   script:
