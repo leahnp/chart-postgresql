@@ -3,10 +3,8 @@ image: $HELM_REGISTRY_IMAGE:$HELM_REGISTRY_VERSION
 variables:
   REGISTRY: quay.io
   REGISTRY_USER: samsung_cnct
-  # ROBOT_ACCOUNT: postgresql_rw
-  CHART_REL: ${CI_COMMIT_SHA}
+  ROBOT_ACCOUNT: postgresql_rw
   CHART_NAME: postgresql
-  REGISTRY_CHART_URI:  ${REGISTRY_HOST}/${REGISTRY_CHART_ORG}/${CHART_NAME}
   HELM_REGISTRY_IMAGE: quay.io/samsung_cnct/helm-registry-agent
   HELM_REGISTRY_VERSION: v0.7.4-helm_2.6
 
@@ -15,70 +13,38 @@ stages:
   - test
   - publish
 
-build-branch:
-  stage: build
-  only:
-    - branches
-    # - master
-  artifacts:
-    paths:
-    - ./*/Chart.yaml
-    expire_in: 1 week
-  script:
-  - export BRANCH_TAG=`echo $CI_COMMIT_REF_NAME | sed 's/_/-/g'`
-  - CHART_VER=0.0.1-${BRANCH_TAG} envsubst < build/Chart.yaml.in > ${CHART_NAME}/Chart.yaml
+before_script:
+  - helm registry login -u ${REGISTRY_USER}+${ROBOT_ACCOUNT} -p ${REGISTRY_PASSWORD} ${REGISTRY}
 
-test-branch:
-  stage: test
-  only:
-    - branches
-    # - master
-  dependencies:
-  - build-branch
-  script:
-  - cat ${CHART_NAME}/Chart.yaml
-  - helm lint ${CHART_NAME}
-
-publish-branch:
-  stage: publish
-  only:
-    - branches
-    # - master
-  dependencies:
-  - build-branch
-  script:
-  - helm registry login -u ${REGISTRY_USERNAME} -p ${REGISTRY_PASSWORD} ${REGISTRY_HOST}
-  - cd ${CHART_NAME}
-  - helm registry push ${REGISTRY_CHART_URI} -c alpha
-
-build-tags:
+build_chart:
   stage: build
   only:
     - tags
-  artifacts:
+    - branches
+  artifacts: 
     paths:
-    - ./*/Chart.yaml
-    expire_in: 1 week
+      - ${CHART_NAME}
   script:
-  - CHART_VER=${CI_COMMIT_TAG} CHART_REL=0 envsubst < build/Chart.yaml.in > ${CHART_NAME}/Chart.yaml
+    - build/build.sh
 
-test-tags:
+helm_test:
   stage: test
   only:
     - tags
-  dependencies:
-  - build-tags
+    - branches
   script:
-  - cat ${CHART_NAME}/Chart.yaml
-  - helm lint ${CHART_NAME}
+    - build/test.sh
 
-publish-tags:
+helm_publish_alpha:
   stage: publish
   only:
-    - tags
-  dependencies:
-  - build-tags
+    - master
   script:
-  - helm registry login -u ${REGISTRY_USERNAME} -p ${REGISTRY_PASSWORD} ${REGISTRY_HOST}
-  - cd ${CHART_NAME}
-  - helm registry push ${REGISTRY_CHART_URI} -c stable
+    - cd ${CHART_NAME} && helm registry push ${REGISTRY}/${REGISTRY_USER}/${CHART_NAME} -c alpha
+
+helm_publish_tag:
+  stage: publish
+  only:
+    - /v[0-9]+\.[0-9]+(\.[0-9]+[a-z]?)?/
+  script:
+    - cd ${CHART_NAME} && helm registry push ${REGISTRY}/${REGISTRY_USER}/${CHART_NAME} -c stable
